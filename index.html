@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SaaS ARR Growth Alert Dashboard - Executive analytics dashboard for monitoring business health, customer retention, and growth metrics">
+    <meta name="author" content="Senior Data Analyst Portfolio">
+    <title>SaaS ARR Growth Alert Dashboard | Data Analytics Case Study</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f9fafb;
+        }
+        
+        #root {
+            min-height: 100vh;
+        }
+        
+        /* Loading indicator */
+        #loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-size: 20px;
+            color: #7c3aed;
+        }
+        
+        /* Ensure charts are responsive */
+        .recharts-wrapper {
+            margin: 0 auto;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background-color: white;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div id="loading">Loading dashboard...</div>
+    </div>
+
+    <!-- React 18 -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Recharts 2.5.0 -->
+    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
+    
+    <!-- Babel Standalone -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } = Recharts;
+
+        function Dashboard() {
+            const months = ['Oct 24', 'Nov 24', 'Dec 24', 'Jan 25', 'Feb 25', 'Mar 25', 'Apr 25', 'May 25', 'Jun 25', 'Jul 25', 'Aug 25', 'Sep 25', 'Oct 25'];
+            
+            // ARR absolute values (in millions) - Oct 2024 to Oct 2025
+            // Good solid growth through Aug 2025, then crisis in Sep-Oct 2025
+            const arrAbsoluteData = [
+                { month: 'Oct 24', arr: 7.30 },
+                { month: 'Nov 24', arr: 7.44 },
+                { month: 'Dec 24', arr: 7.58 },
+                { month: 'Jan 25', arr: 7.73 },
+                { month: 'Feb 25', arr: 7.87 },
+                { month: 'Mar 25', arr: 8.01 },
+                { month: 'Apr 25', arr: 8.15 },
+                { month: 'May 25', arr: 8.28 },
+                { month: 'Jun 25', arr: 8.41 },
+                { month: 'Jul 25', arr: 8.42 },
+                { month: 'Aug 25', arr: 8.40 },
+                { month: 'Sep 25', arr: 8.42 },
+                { month: 'Oct 25', arr: 8.425 }
+            ];
+            
+            // ARR Growth data - solid growth then sharp decline
+            const arrGrowthData = [
+                { month: 'Oct 24', arr: 7.30 },
+                { month: 'Nov 24', growth: 1.9 },
+                { month: 'Dec 24', growth: 1.9 },
+                { month: 'Jan 25', growth: 2.0 },
+                { month: 'Feb 25', growth: 1.8 },
+                { month: 'Mar 25', growth: 1.8 },
+                { month: 'Apr 25', growth: 1.7 },
+                { month: 'May 25', growth: 1.6 },
+                { month: 'Jun 25', growth: 1.6 },
+                { month: 'Jul 25', growth: 0.1 },
+                { month: 'Aug 25', growth: -0.2 },
+                { month: 'Sep 25', growth: 0.2 },
+                { month: 'Oct 25', growth: 0.06 }
+            ];
+
+            // Churn spiking in last 2 months (Sep-Oct 2025)
+            const churnData = [
+                { month: 'Oct 24', churn: 6.1, nrr: 104 },
+                { month: 'Nov 24', churn: 6.3, nrr: 103 },
+                { month: 'Dec 24', churn: 5.9, nrr: 105 },
+                { month: 'Jan 25', churn: 6.2, nrr: 104 },
+                { month: 'Feb 25', churn: 5.8, nrr: 106 },
+                { month: 'Mar 25', churn: 6.0, nrr: 105 },
+                { month: 'Apr 25', churn: 6.4, nrr: 103 },
+                { month: 'May 25', churn: 5.7, nrr: 104 },
+                { month: 'Jun 25', churn: 6.1, nrr: 103 },
+                { month: 'Jul 25', churn: 6.5, nrr: 102 },
+                { month: 'Aug 25', churn: 6.2, nrr: 101 },
+                { month: 'Sep 25', churn: 8.2, nrr: 93 },
+                { month: 'Oct 25', churn: 9.5, nrr: 88 }
+            ];
+
+            // NRR declining below 100% in Sep-Oct 2025
+            const nrrData = [
+                { month: 'Oct 24', nrr: 104 },
+                { month: 'Nov 24', nrr: 103 },
+                { month: 'Dec 24', nrr: 105 },
+                { month: 'Jan 25', nrr: 104 },
+                { month: 'Feb 25', nrr: 106 },
+                { month: 'Mar 25', nrr: 105 },
+                { month: 'Apr 25', nrr: 103 },
+                { month: 'May 25', nrr: 104 },
+                { month: 'Jun 25', nrr: 103 },
+                { month: 'Jul 25', nrr: 102 },
+                { month: 'Aug 25', nrr: 101 },
+                { month: 'Sep 25', nrr: 93 },
+                { month: 'Oct 25', nrr: 88 }
+            ];
+
+            // Engagement metrics declining in Sep-Oct 2025
+            const engagementData = [
+                { month: 'Oct 24', dau: 10200, sessions: 8.3 },
+                { month: 'Nov 24', dau: 10500, sessions: 8.5 },
+                { month: 'Dec 24', dau: 10800, sessions: 8.7 },
+                { month: 'Jan 25', dau: 11000, sessions: 8.9 },
+                { month: 'Feb 25', dau: 11200, sessions: 9.1 },
+                { month: 'Mar 25', dau: 11400, sessions: 9.2 },
+                { month: 'Apr 25', dau: 11500, sessions: 9.3 },
+                { month: 'May 25', dau: 11600, sessions: 9.4 },
+                { month: 'Jun 25', dau: 11700, sessions: 9.5 },
+                { month: 'Jul 25', dau: 11800, sessions: 9.3 },
+                { month: 'Aug 25', dau: 11900, sessions: 9.2 },
+                { month: 'Sep 25', dau: 11100, sessions: 8.4 },
+                { month: 'Oct 25', dau: 10600, sessions: 7.9 }
+            ];
+
+            // ARR Waterfall - churn bleeding in Sep-Oct 2025
+            const waterfallData = [
+                { month: 'Oct 24', new: 95, expansion: 28, churn: -48, downgrades: -11 },
+                { month: 'Nov 24', new: 97, expansion: 30, churn: -47, downgrades: -10 },
+                { month: 'Dec 24', new: 98, expansion: 29, churn: -43, downgrades: -12 },
+                { month: 'Jan 25', new: 101, expansion: 32, churn: -48, downgrades: -9 },
+                { month: 'Feb 25', new: 98, expansion: 31, churn: -46, downgrades: -11 },
+                { month: 'Mar 25', new: 99, expansion: 28, churn: -44, downgrades: -10 },
+                { month: 'Apr 25', new: 102, expansion: 30, churn: -50, downgrades: -13 },
+                { month: 'May 25', new: 100, expansion: 29, churn: -45, downgrades: -11 },
+                { month: 'Jun 25', new: 103, expansion: 33, churn: -48, downgrades: -10 },
+                { month: 'Jul 25', new: 96, expansion: 27, churn: -52, downgrades: -12 },
+                { month: 'Aug 25', new: 94, expansion: 26, churn: -50, downgrades: -11 },
+                { month: 'Sep 25', new: 98, expansion: 24, churn: -68, downgrades: -13 },
+                { month: 'Oct 25', new: 95, expansion: 18, churn: -93, downgrades: -15 }
+            ];
+
+            // Individual ARR component trends for sparklines
+            const newCustomersARRTrend = [
+                { month: 'Oct 24', value: 95 },
+                { month: 'Nov 24', value: 97 },
+                { month: 'Dec 24', value: 98 },
+                { month: 'Jan 25', value: 101 },
+                { month: 'Feb 25', value: 98 },
+                { month: 'Mar 25', value: 99 },
+                { month: 'Apr 25', value: 102 },
+                { month: 'May 25', value: 100 },
+                { month: 'Jun 25', value: 103 },
+                { month: 'Jul 25', value: 96 },
+                { month: 'Aug 25', value: 94 },
+                { month: 'Sep 25', value: 98 },
+                { month: 'Oct 25', value: 95 }
+            ];
+
+            const churnARRTrend = [
+                { month: 'Oct 24', value: 48 },
+                { month: 'Nov 24', value: 47 },
+                { month: 'Dec 24', value: 43 },
+                { month: 'Jan 25', value: 48 },
+                { month: 'Feb 25', value: 46 },
+                { month: 'Mar 25', value: 44 },
+                { month: 'Apr 25', value: 50 },
+                { month: 'May 25', value: 45 },
+                { month: 'Jun 25', value: 48 },
+                { month: 'Jul 25', value: 52 },
+                { month: 'Aug 25', value: 50 },
+                { month: 'Sep 25', value: 68 },
+                { month: 'Oct 25', value: 93 }
+            ];
+
+            const expansionsARRTrend = [
+                { month: 'Oct 24', value: 28 },
+                { month: 'Nov 24', value: 30 },
+                { month: 'Dec 24', value: 29 },
+                { month: 'Jan 25', value: 32 },
+                { month: 'Feb 25', value: 31 },
+                { month: 'Mar 25', value: 28 },
+                { month: 'Apr 25', value: 30 },
+                { month: 'May 25', value: 29 },
+                { month: 'Jun 25', value: 33 },
+                { month: 'Jul 25', value: 27 },
+                { month: 'Aug 25', value: 26 },
+                { month: 'Sep 25', value: 24 },
+                { month: 'Oct 25', value: 18 }
+            ];
+
+            const downgradesARRTrend = [
+                { month: 'Oct 24', value: 11 },
+                { month: 'Nov 24', value: 10 },
+                { month: 'Dec 24', value: 12 },
+                { month: 'Jan 25', value: 9 },
+                { month: 'Feb 25', value: 11 },
+                { month: 'Mar 25', value: 10 },
+                { month: 'Apr 25', value: 13 },
+                { month: 'May 25', value: 11 },
+                { month: 'Jun 25', value: 10 },
+                { month: 'Jul 25', value: 12 },
+                { month: 'Aug 25', value: 11 },
+                { month: 'Sep 25', value: 13 },
+                { month: 'Oct 25', value: 15 }
+            ];
+
+            // Website visitors data (showing traffic is NOT the problem)
+            const visitorsData = [
+                { month: 'Oct 24', visitors: 118000 },
+                { month: 'Nov 24', visitors: 120000 },
+                { month: 'Dec 24', visitors: 122000 },
+                { month: 'Jan 25', visitors: 125000 },
+                { month: 'Feb 25', visitors: 124000 },
+                { month: 'Mar 25', visitors: 126000 },
+                { month: 'Apr 25', visitors: 127000 },
+                { month: 'May 25', visitors: 128000 },
+                { month: 'Jun 25', visitors: 127500 },
+                { month: 'Jul 25', visitors: 126500 },
+                { month: 'Aug 25', visitors: 127000 },
+                { month: 'Sep 25', visitors: 126000 },
+                { month: 'Oct 25', visitors: 125000 }
+            ];
+
+            // Signups data
+            const signupsData = [
+                { month: 'Oct 24', signups: 3540 },  // ~3% conversion
+                { month: 'Nov 24', signups: 3540 },  // ~2.95% conversion
+                { month: 'Dec 24', signups: 3600 },
+                { month: 'Jan 25', signups: 3688 },
+                { month: 'Feb 25', signups: 3658 },  // ~2.95% conversion
+                { month: 'Mar 25', signups: 3717 },  // ~2.95% conversion
+                { month: 'Apr 25', signups: 3717 },  // ~2.95% conversion
+                { month: 'May 25', signups: 3776 },
+                { month: 'Jun 25', signups: 3763 },
+                { month: 'Jul 25', signups: 3732 },
+                { month: 'Aug 25', signups: 3747 },
+                { month: 'Sep 25', signups: 3717 },
+                { month: 'Oct 25', signups: 3688 }   // ~2.95% conversion
+            ];
+
+            // Traffic data showing strong top-of-funnel (Oct 2025)
+            const currentTraffic = 125000;
+            const currentSignups = 3688;
+            const currentActivated = 2400;
+            const currentPaying = 395;
+
+            return (
+                <div className="min-h-screen bg-gray-50 p-8">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        {/* Context Banner */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p className="text-sm text-blue-900">
+                                <strong>Context:</strong> This dashboard analyzes a SaaS link management platform's business health and growth metrics for October 2025. All data are simulated for case study purposes. Analysis focuses on the full customer lifecycle from acquisition to retention.
+                            </p>
+                        </div>
+
+                        {/* Executive Alert */}
+                        <div className="bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl p-6 text-white shadow-lg">
+                            <div className="flex items-start gap-3">
+                                <span className="text-3xl">🚨</span>
+                                <div className="flex-1">
+                                    <h1 className="text-2xl font-bold mb-3">Self-Serve ARR Growth Alert</h1>
+                                    <p className="text-purple-50 leading-relaxed mb-3">
+                                        ARR growth has stalled to near-zero (+0.06% in October 2025). We're now $175K behind our year-end target of $8.6M.
+                                    </p>
+                                    <div className="bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+                                        <p className="font-semibold text-lg mb-1">🎯 Root Cause:</p>
+                                        <p className="text-purple-50">
+                                            <strong>Churn spiked to 9.5%</strong> (up 56% vs last year), bleeding $93K in Oct vs $48K baseline. 
+                                            DAU dropped 11% since August. Acquisition and monetization remain healthy — this is a retention challenge.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Main Title */}
+                        <div className="mb-6">
+                            <h1 className="text-4xl font-bold text-gray-900">Dashboard 3: Self-Serve ARR Growth & Health Monitoring</h1>
+                            <p className="text-gray-600 mt-2 text-lg">Diagnostic analysis of business performance across the full customer lifecycle</p>
+                        </div>
+
+                        {/* ARR Overview Section */}
+                        <div className="space-y-5">
+                            <h2 className="text-2xl font-bold text-gray-900 border-b-4 border-purple-600 pb-2">📊 ARR Overview</h2>
+                            <p className="text-gray-700 text-lg">How is our Annual Recurring Revenue trending?</p>
+
+                            {/* North Star Metrics - ARR Focus */}
+                            <div className="grid grid-cols-4 gap-5">
+                                <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-600">
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current ARR (Oct 2025)</div>
+                                    <div className="text-4xl font-bold text-gray-900">$8.43M</div>
+                                </div>
+                                <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Month</div>
+                                    <div className="text-4xl font-bold text-gray-600">+0.06%</div>
+                                </div>
+                                <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Year</div>
+                                    <div className="text-4xl font-bold text-green-600">+15.5%</div>
+                                </div>
+                                <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Target</div>
+                                    <div className="text-4xl font-bold text-red-600">-2.0%</div>
+                                </div>
+                            </div>
+
+                            {/* ARR Evolution Charts */}
+                            <div className="grid grid-cols-2 gap-5">
+                                <div className="bg-white rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-1">ARR Evolution (Last 12 Months)</h3>
+                                    <p className="text-sm text-gray-600 mb-4">Absolute ARR values showing growth stagnation in recent months</p>
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <LineChart data={arrAbsoluteData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} domain={[7.0, 8.7]} tickFormatter={(value) => `$${value}M`} />
+                                            <Tooltip formatter={(value) => `$${value}M`} />
+                                            <Line type="monotone" dataKey="arr" stroke="#7c3aed" strokeWidth={3} name="ARR" dot={{ fill: '#7c3aed', r: 4 }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                <div className="bg-white rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-1">MoM ARR Growth Rate (%)</h3>
+                                    <p className="text-sm text-gray-600 mb-4">🚨 Growth rate collapsed to near-zero in October 2025</p>
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <BarChart data={arrGrowthData.slice(1)}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} domain={[-1, 2.5]} />
+                                            <Tooltip formatter={(value) => `${value}%`} />
+                                            <Bar dataKey="growth" fill="#7c3aed" name="MoM Growth %" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* ARR Breakdown - Net New ARR */}
+                            <div className="bg-white rounded-xl p-8 shadow-sm border-t-4 border-yellow-500">
+                                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Net New ARR (Oct 2025)</div>
+                                <div className="text-5xl font-bold text-yellow-700 mb-2">+$5K</div>
+                                <div className="text-sm text-gray-600">New Customers + Expansions - Churn - Downgrades</div>
+                            </div>
+
+                            {/* ARR Components Grid with Mini Charts */}
+                            <div className="grid grid-cols-4 gap-5">
+                                {/* New Customers ARR */}
+                                <div>
+                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 shadow-sm border-l-4 border-green-500 mb-3">
+                                        <div className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-2">New Customers ARR</div>
+                                        <div className="text-4xl font-bold text-green-700">+$95K</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                                        <ResponsiveContainer width="100%" height={80}>
+                                            <LineChart data={newCustomersARRTrend}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" hide />
+                                                <YAxis hide domain={[90, 105]} />
+                                                <Tooltip formatter={(value) => `$${value}K`} />
+                                                <Line type="monotone" dataKey="value" stroke="#15803d" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Churn ARR */}
+                                <div>
+                                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 shadow-sm border-l-4 border-red-500 mb-3">
+                                        <div className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-2">Churn ARR (Lost)</div>
+                                        <div className="text-4xl font-bold text-red-700">-$93K</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                                        <ResponsiveContainer width="100%" height={80}>
+                                            <LineChart data={churnARRTrend}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" hide />
+                                                <YAxis hide domain={[40, 100]} />
+                                                <Tooltip formatter={(value) => `$${value}K`} />
+                                                <Line type="monotone" dataKey="value" stroke="#b91c1c" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Expansions ARR */}
+                                <div>
+                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 shadow-sm border-l-4 border-blue-500 mb-3">
+                                        <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">Expansions ARR</div>
+                                        <div className="text-4xl font-bold text-blue-700">+$18K</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                                        <ResponsiveContainer width="100%" height={80}>
+                                            <LineChart data={expansionsARRTrend}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" hide />
+                                                <YAxis hide domain={[15, 35]} />
+                                                <Tooltip formatter={(value) => `$${value}K`} />
+                                                <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Downgrades ARR */}
+                                <div>
+                                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 shadow-sm border-l-4 border-orange-500 mb-3">
+                                        <div className="text-xs font-semibold text-orange-800 uppercase tracking-wide mb-2">Downgrades ARR (Lost)</div>
+                                        <div className="text-4xl font-bold text-orange-700">-$15K</div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 shadow-sm">
+                                        <ResponsiveContainer width="100%" height={80}>
+                                            <LineChart data={downgradesARRTrend}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" hide />
+                                                <YAxis hide domain={[8, 16]} />
+                                                <Tooltip formatter={(value) => `$${value}K`} />
+                                                <Line type="monotone" dataKey="value" stroke="#c2410c" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ARR Movement Waterfall */}
+                            <div className="bg-white rounded-xl p-6 shadow-sm mt-5">
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">ARR Movement Waterfall</h3>
+                                <p className="text-sm text-gray-600 mb-4">Monthly breakdown: Churn spiked to $93K in Oct 2025, nearly offsetting new customer gains</p>
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <BarChart data={waterfallData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip />
+                                        <Legend />
+                                        <Bar dataKey="new" fill="#15803d" name="New ARR ($K)" />
+                                        <Bar dataKey="expansion" fill="#1d4ed8" name="Expansion ($K)" />
+                                        <Bar dataKey="churn" fill="#b91c1c" name="Churned ($K)" />
+                                        <Bar dataKey="downgrades" fill="#f97316" name="Downgrades ($K)" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Traffic, Acquisition and Plan Type Mix Section */}
+                        <div className="space-y-5 mt-10">
+                            <h2 className="text-2xl font-bold text-gray-900 border-b-4 border-purple-600 pb-2">🚀 Traffic, Acquisition and Plan Type Mix</h2>
+                            <p className="text-gray-700 text-lg">Are we attracting and converting visitors effectively?</p>
+
+                            {/* Website Traffic */}
+                            <div className="bg-white rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">Website Visitors</h3>
+                                <p className="text-sm text-gray-600 mb-4">✓ Traffic remains stable around 125K monthly visitors</p>
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <AreaChart data={visitorsData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                        <YAxis tick={{ fontSize: 11 }} domain={[115000, 130000]} tickFormatter={(value) => `${(value/1000).toFixed(0)}K`} />
+                                        <Tooltip formatter={(value) => `${(value/1000).toFixed(1)}K visitors`} />
+                                        <Area type="monotone" dataKey="visitors" stroke="#7c3aed" fill="#E9D5FF" strokeWidth={2} name="Website Visitors" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Account Signups */}
+                            <div className="space-y-5">
+                                <h3 className="text-lg font-bold text-gray-900">Account Signups</h3>
+                                
+                                {/* 3 KPI Cards */}
+                                <div className="grid grid-cols-3 gap-5">
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Signups (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-gray-900">3,688</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Visitor → Signup Rate</div>
+                                        <div className="text-4xl font-bold text-gray-900">2.95%</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Month</div>
+                                        <div className="text-4xl font-bold text-green-600">-0.8%</div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-xl p-6 shadow-sm">
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">Account Signups Trend</h4>
+                                    <p className="text-sm text-gray-600 mb-4">✓ Signup volume stable around 3,700 monthly</p>
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <AreaChart data={signupsData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} domain={[3500, 3800]} />
+                                            <Tooltip />
+                                            <Area type="monotone" dataKey="signups" stroke="#7c3aed" fill="#E9D5FF" strokeWidth={2} name="Signups" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Free-to-Paid Conversion */}
+                            <div className="space-y-5">
+                                <h3 className="text-lg font-bold text-gray-900">Free-to-Paid Conversion</h3>
+                                
+                                {/* 3 KPI Cards */}
+                                <div className="grid grid-cols-3 gap-5 mb-5">
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current Conversion (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-gray-900">16.5%</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Month</div>
+                                        <div className="text-4xl font-bold text-red-600">-0.3%</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">New Paying Customers</div>
+                                        <div className="text-4xl font-bold text-gray-900">395</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Customer Health Section */}
+                        <div className="space-y-5 mt-10">
+                            <h2 className="text-2xl font-bold text-gray-900 border-b-4 border-purple-600 pb-2">💊 Customer Health Metrics</h2>
+                            <p className="text-gray-700 text-lg">Are our customers engaged and staying with us?</p>
+
+                            {/* DAU Subsection */}
+                            <div className="mb-8">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">Daily Active Users (DAU)</h3>
+                                
+                                {/* 3 KPI Cards */}
+                                <div className="grid grid-cols-3 gap-5 mb-5">
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current DAU (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-gray-900">10,600</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Month</div>
+                                        <div className="text-4xl font-bold text-red-600">-4.5%</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-purple-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Peak (Aug 2025)</div>
+                                        <div className="text-4xl font-bold text-red-600">-11%</div>
+                                    </div>
+                                </div>
+
+                                {/* Engagement Chart */}
+                                <div className="bg-white rounded-xl p-6 shadow-sm">
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">User Engagement Trend</h4>
+                                    <p className="text-sm text-gray-600 mb-4">🚨 DAU declined sharply in Sep-Oct 2025, signaling engagement issues</p>
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <AreaChart data={engagementData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} domain={[10000, 12500]} tickFormatter={(value) => `${(value/1000).toFixed(1)}K`} />
+                                            <Tooltip formatter={(value) => `${(value/1000).toFixed(1)}K users`} />
+                                            <Area type="monotone" dataKey="dau" stroke="#7c3aed" fill="#E9D5FF" strokeWidth={3} name="DAU" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Churn Subsection */}
+                            <div className="mb-8">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">Customer Churn</h3>
+                                
+                                {/* 3 KPI Cards */}
+                                <div className="grid grid-cols-3 gap-5 mb-5">
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-red-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Churn Rate (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-gray-900">9.5%</div>
+                                        <div className="text-xs text-gray-600 mt-2">of paid accounts</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-red-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Churned ARR (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-red-700">-$93K</div>
+                                        <div className="text-xs text-gray-600 mt-2">revenue lost this month</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-red-600">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Year</div>
+                                        <div className="text-4xl font-bold text-red-600">+93.8%</div>
+                                        <div className="text-xs text-gray-600 mt-2">churned ARR increase</div>
+                                    </div>
+                                </div>
+
+                                {/* Two Charts Side by Side */}
+                                <div className="grid grid-cols-2 gap-5">
+                                    {/* Churn Rate % Chart */}
+                                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                                        <h4 className="text-lg font-bold text-gray-900 mb-1">Churn Rate % Evolution</h4>
+                                        <p className="text-sm text-gray-600 mb-4">🚨 Customer churn rate spiked from 6% to 9.5%</p>
+                                        <ResponsiveContainer width="100%" height={260}>
+                                            <AreaChart data={churnData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                                <YAxis tick={{ fontSize: 11 }} domain={[5, 10]} tickFormatter={(value) => `${value}%`} />
+                                                <Tooltip formatter={(value) => `${value}%`} />
+                                                <Area type="monotone" dataKey="churn" stroke="#b91c1c" fill="#FEE2E2" strokeWidth={3} name="Churn Rate" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    {/* Churned ARR Chart */}
+                                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                                        <h4 className="text-lg font-bold text-gray-900 mb-1">Churned ARR ($K) Evolution</h4>
+                                        <p className="text-sm text-gray-600 mb-4">💸 Revenue bleeding spiked to $93K/month in Oct 2025</p>
+                                        <ResponsiveContainer width="100%" height={260}>
+                                            <AreaChart data={churnARRTrend}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                                <YAxis tick={{ fontSize: 11 }} domain={[40, 100]} tickFormatter={(value) => `$${value}K`} />
+                                                <Tooltip formatter={(value) => `$${value}K`} />
+                                                <Area type="monotone" dataKey="value" stroke="#b91c1c" fill="#FEE2E2" strokeWidth={3} name="Churned ARR" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* NRR Subsection */}
+                            <div className="mb-8">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">Net Revenue Retention (NRR)</h3>
+                                
+                                {/* 2 KPI Cards */}
+                                <div className="grid grid-cols-2 gap-5 mb-5">
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-yellow-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Current NRR (Oct 2025)</div>
+                                        <div className="text-4xl font-bold text-gray-900">88%</div>
+                                        <div className="text-xs text-yellow-600 mt-2">⚠ Below 100% benchmark</div>
+                                    </div>
+                                    <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-yellow-500">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">vs Last Month</div>
+                                        <div className="text-4xl font-bold text-red-600">-5 pts</div>
+                                        <div className="text-xs text-gray-600 mt-2">from 93% in Sep 2025</div>
+                                    </div>
+                                </div>
+
+                                {/* NRR Chart */}
+                                <div className="bg-white rounded-xl p-6 shadow-sm">
+                                    <h4 className="text-lg font-bold text-gray-900 mb-1">NRR Trend</h4>
+                                    <p className="text-sm text-gray-600 mb-4">⚠ NRR dropped below 100% in Sep-Oct, indicating net revenue loss from existing cohorts</p>
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <LineChart data={nrrData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                                            <YAxis tick={{ fontSize: 11 }} domain={[85, 110]} tickFormatter={(value) => `${value}%`} />
+                                            <Tooltip formatter={(value) => `${value}%`} />
+                                            <Line type="monotone" dataKey="nrr" stroke="#7c3aed" strokeWidth={3} name="NRR %" dot={{ fill: '#7c3aed', r: 4 }} />
+                                            <Line type="monotone" y={100} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" name="100% Benchmark" />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Funnel */}
+                        <div className="bg-white rounded-xl p-8 shadow-sm">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Self-Serve Conversion & Payment Funnel</h2>
+                                <p className="text-gray-600">October 2025 performance — conversion remains healthy through payment</p>
+                            </div>
+                            
+                            {/* Vertical Funnel Visualization */}
+                            <div className="flex flex-col items-center gap-3 py-4">
+                                {/* Stage 1: Traffic */}
+                                <div className="w-full max-w-4xl">
+                                    <div className="bg-gradient-to-r from-purple-700 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
+                                        <div className="text-sm font-semibold uppercase mb-2">Traffic</div>
+                                        <div className="text-4xl font-bold mb-1">125K</div>
+                                        <div className="text-sm opacity-90">Website Visitors</div>
+                                        <div className="text-xs mt-2 opacity-75">↓ 0.8% vs LM</div>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <div className="text-purple-400 text-2xl">↓</div>
+
+                                {/* Stage 2: Signups */}
+                                <div className="w-full max-w-3xl">
+                                    <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-lg p-6 text-center shadow-lg">
+                                        <div className="text-sm font-semibold uppercase mb-2">Signups</div>
+                                        <div className="text-4xl font-bold mb-1">3.7K</div>
+                                        <div className="text-sm opacity-90">2.95% conversion</div>
+                                        <div className="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">✓ Stable</div>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <div className="text-purple-400 text-2xl">↓</div>
+
+                                {/* Stage 3: Activated */}
+                                <div className="w-full max-w-2xl">
+                                    <div className="bg-gradient-to-r from-purple-500 to-purple-400 text-white rounded-lg p-6 text-center shadow-lg">
+                                        <div className="text-sm font-semibold uppercase mb-2">Activated</div>
+                                        <div className="text-4xl font-bold mb-1">2.4K</div>
+                                        <div className="text-sm opacity-90">65% activation</div>
+                                        <div className="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">✓ Stable</div>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <div className="text-purple-400 text-2xl">↓</div>
+
+                                {/* Stage 4: Paying */}
+                                <div className="w-full max-w-xl">
+                                    <div className="bg-gradient-to-r from-purple-400 to-purple-300 text-white rounded-lg p-6 text-center shadow-lg">
+                                        <div className="text-sm font-semibold uppercase mb-2">Paying</div>
+                                        <div className="text-4xl font-bold mb-1">395</div>
+                                        <div className="text-sm opacity-90">16.5% conversion</div>
+                                        <div className="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">✓ Stable</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Items */}
+                        <div className="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-300 rounded-xl p-6">
+                            <div className="flex items-center gap-2 mb-5">
+                                <span className="text-2xl">💡</span>
+                                <h2 className="text-xl font-bold text-purple-900">Priority Actions for This Week</h2>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-white rounded-lg p-5 border-l-4 border-purple-600 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 mb-2">1. Churn Autopsy</h3>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                        Interview 25+ customers who churned in Sep-Oct 2025. Identify patterns: pricing, features, competitors, or product issues.
+                                    </p>
+                                </div>
+                                <div className="bg-white rounded-lg p-5 border-l-4 border-purple-600 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 mb-2">2. Re-engagement Campaign</h3>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                        Target low-engagement accounts (DAU down 11% since Aug). Launch proactive outreach and usage incentives.
+                                    </p>
+                                </div>
+                                <div className="bg-white rounded-lg p-5 border-l-4 border-purple-600 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 mb-2">3. Product Health Check</h3>
+                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                        Analyze product analytics for bugs, performance issues, or UX friction. Investigate urgently.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-5 bg-white/50 rounded-lg p-4">
+                                <p className="text-sm text-gray-700">
+                                    <strong>Expected Impact:</strong> Reducing churn by 2.5 points (9.5% → 7%) would save ~$25K monthly and restore solid ARR growth.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Additional Context */}
+                        <div className="grid grid-cols-2 gap-5">
+                            <div className="bg-white rounded-xl p-6 shadow-sm">
+                                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                    <span>📊</span> Key Metrics Summary
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between border-b pb-2">
+                                        <span className="text-gray-600">Customer Churn Rate (Oct 2025):</span>
+                                        <span className="font-semibold text-red-600">9.5% ⚠</span>
+                                    </div>
+                                    <div className="flex justify-between border-b pb-2">
+                                        <span className="text-gray-600">Net Revenue Retention:</span>
+                                        <span className="font-semibold text-red-600">88% (below 100%)</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">DAU Decline (Aug-Oct):</span>
+                                        <span className="font-semibold text-red-600">-11%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-xl p-6 shadow-sm">
+                                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                    <span>✅</span> What's Working
+                                </h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex gap-2">
+                                        <span className="text-green-600 font-bold">✓</span>
+                                        <p className="text-gray-700">
+                                            <strong>Acquisition funnel is healthy</strong> — signup and conversion rates stable at 2.95% and 16.5%
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="text-green-600 font-bold">✓</span>
+                                        <p className="text-gray-700">
+                                            <strong>New customer ARR steady</strong> — adding ~$95K monthly from new signups
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <span className="text-green-600 font-bold">✓</span>
+                                        <p className="text-gray-700">
+                                            <strong>Expansion revenue exists</strong> — $18K monthly from upsells/cross-sells (though declining)
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-10 text-center text-gray-500 text-sm border-t pt-6">
+                            <p>SaaS ARR Growth Alert Dashboard | Data Analytics Case Study | October 2025</p>
+                            <p className="mt-2">Interactive dashboard built with React + Recharts | All data simulated for demonstration purposes</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
